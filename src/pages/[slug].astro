@@ -28,15 +28,11 @@ const currentVideoTitleKeywords = video.title
   .split(/\s+/)
   .filter(word => word.length > 2 && !['bokep', 'video', 'jepang', 'indo', 'yang', 'dan', 'di', 'ini', 'itu', 'dengan'].includes(word));
 
-// --- MODIFIKASI DIMULAI DI SINI ---
-
 // 2. Buat daftar video kandidat untuk terkait, kecuali video saat ini DAN judulnya tidak sama persis
 const candidateVideos = allVideos.filter(v => 
-    v.id !== video.id && // Pastikan bukan video yang sedang dilihat berdasarkan ID
-    v.title.toLowerCase() !== video.title.toLowerCase() // Pastikan judulnya tidak sama persis
+    v.id !== video.id && 
+    v.title.toLowerCase() !== video.title.toLowerCase() 
 );
-
-// --- MODIFIKASI BERAKHIR DI SINI ---
 
 // 3. Beri skor setiap video kandidat berdasarkan relevansi
 const scoredCandidates = candidateVideos.map(v => {
@@ -61,20 +57,27 @@ const scoredCandidates = candidateVideos.map(v => {
 // 4. Urutkan kandidat berdasarkan skor (tertinggi ke terendah)
 scoredCandidates.sort((a, b) => {
   if (b.score === a.score) {
-    return 0.5 - Math.random();
+    return 0.5 - Math.random(); 
   }
   return b.score - a.score;
 });
 
+// --- MODIFIKASI DIMULAI DI SINI ---
+
 // 5. Ambil video terkait dari daftar yang sudah diurutkan
+// Gunakan dua Set: satu untuk ID, satu untuk judul agar tidak ada duplikasi
 const addedVideoIds = new Set<string>();
+const addedVideoTitles = new Set<string>(); // Set baru untuk melacak judul yang sudah ditambahkan
+
 for (const scoredV of scoredCandidates) {
   if (relatedVideos.length >= numberOfRelatedVideos) {
     break;
   }
-  if (!addedVideoIds.has(scoredV.video.id)) {
+  const lowerCaseTitle = scoredV.video.title.toLowerCase();
+  if (!addedVideoIds.has(scoredV.video.id) && !addedVideoTitles.has(lowerCaseTitle)) {
     relatedVideos.push(scoredV.video);
     addedVideoIds.add(scoredV.video.id);
+    addedVideoTitles.add(lowerCaseTitle); // Tambahkan judul ke Set judul
   }
 }
 
@@ -82,23 +85,25 @@ for (const scoredV of scoredCandidates) {
 if (relatedVideos.length < numberOfRelatedVideos) {
   const remainingSlots = numberOfRelatedVideos - relatedVideos.length;
   const otherVideosForRandom = allVideos.filter(v => 
-    v.id !== video.id && // Pastikan bukan video yang sedang dilihat
-    v.title.toLowerCase() !== video.title.toLowerCase() && // Pastikan judulnya tidak sama persis
-    !addedVideoIds.has(v.id) // Pastikan belum ditambahkan
+    v.id !== video.id && 
+    v.title.toLowerCase() !== video.title.toLowerCase() && 
+    !addedVideoIds.has(v.id) &&
+    !addedVideoTitles.has(v.title.toLowerCase()) // Pastikan judulnya juga belum ditambahkan
   );
   const shuffledOthersForRandom = otherVideosForRandom.sort(() => 0.5 - Math.random());
   relatedVideos.push(...shuffledOthersForRandom.slice(0, remainingSlots));
 }
 
+// --- MODIFIKASI BERAKHIR DI SINI ---
+
 // --- Logika untuk Random Videos (terpisah dari related videos) ---
-// Bagian ini juga perlu diupdate agar tidak tumpang tindih dengan video yang sudah ada di `relatedVideos`
-// dan tetap tidak sama dengan video saat ini.
-const numberOfRandomVideos = 16;
+const numberOfRandomVideos = 16; 
 const currentAndRelatedVideoIds = new Set([video.id, ...relatedVideos.map(v => v.id)]);
+const currentAndRelatedVideoTitles = new Set([video.title.toLowerCase(), ...relatedVideos.map(v => v.title.toLowerCase())]); // Ambil judul dari related juga
 
 const videosForRandomSelection = allVideos.filter(v => 
     !currentAndRelatedVideoIds.has(v.id) &&
-    v.title.toLowerCase() !== video.title.toLowerCase() // Tambahkan filter judul di sini juga
+    !currentAndRelatedVideoTitles.has(v.title.toLowerCase()) // Pastikan judulnya juga tidak sama
 );
 
 const randomVideos = videosForRandomSelection
